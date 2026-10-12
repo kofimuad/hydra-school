@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hydra School</title>
+  <meta name="description" content="A day-by-day study planner for the ALX / Holberton software engineering curriculum and beginner Japanese.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Noto+Sans+JP:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+  <script>
+    try { var t = localStorage.getItem("hydra-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">🐉</span>
+        <div>
+          <div class="brand-name">Hydra School</div>
+          <div class="brand-sub">ALX / Holberton · 日本語</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <a href="#today" data-view="today"><span class="ico">☀️</span><span>Today</span></a>
+        <a href="#plan" data-view="plan"><span class="ico">🗓️</span><span>Schedule</span></a>
+        <a href="#curriculum" data-view="curriculum"><span class="ico">📚</span><span>Curriculum</span></a>
+        <a href="#japanese" data-view="japanese"><span class="ico">🇯🇵</span><span>Japanese</span></a>
+        <a href="#settings" data-view="settings"><span class="ico">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="side-stats" id="side-stats"></div>
+    </aside>
+    <main class="main" id="view" tabindex="-1"></main>
+  </div>
+  <script src="assets/curriculum.js"></script>
+  <script src="assets/japanese.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
