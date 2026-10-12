@@ -185,7 +185,17 @@
     const doneToday = [...CODE, ...JPD].filter((s) => state.done[s.key] === t).length;
     const greeting = (() => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; })();
 
-    let html = `<h1>${greeting} 👋</h1><p class="lead">${fmt(t, { year: true })}${restDay ? " · rest day (nothing scheduled — catch up or relax)" : ""}${doneToday ? ` · ${doneToday} session${doneToday > 1 ? "s" : ""} done today ✅` : ""}</p>`;
+    const dayNo = code ? CODE.indexOf(code) + 1 : CODE.length;
+    const now = new Date();
+    const clock = `${fmt(t, { year: true })} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const headline = code ? `Day ${dayNo}. ${esc(byId[code.pid].title)}.` : "You finished the whole plan.";
+    let html = `<section class="hero"><canvas data-pixel="mountains" data-seed="${dayNo}" aria-hidden="true"></canvas>
+      <div class="hero-in">
+        <span class="meta">${clock}${restDay ? " · rest day" : ""}${doneToday ? ` · ${doneToday} done today` : ""}</span>
+        <h1><span class="mark">${greeting}.</span><br><span class="mark">${headline}</span></h1>
+        <p class="sub"><span class="mark-soft">Two hours of code and one hour of Japanese. Show up today and the schedule takes care of the rest.</span></p>
+        <div class="btn-row">${code ? `<a class="btn primary chev" href="#practice/${encodeURIComponent(code.pid)}">Start practising</a>` : ""}${jp ? `<a class="btn" href="#jp/${jp.i}">Japanese drills ✍️</a>` : ""}</div>
+      </div></section>`;
 
     if (cBehind + jBehind > 0) {
       html += `<div class="banner warn"><p>You're behind plan: ${cBehind ? `${cBehind} coding session${cBehind > 1 ? "s" : ""}` : ""}${cBehind && jBehind ? " and " : ""}${jBehind ? `${jBehind} Japanese day${jBehind > 1 ? "s" : ""}` : ""}. No stress — just carry on, or shift the plan so it starts from today.</p>
@@ -204,7 +214,8 @@
         ${code.i === 0 ? `<div><h4 class="eyebrow" style="margin:0 0 6px">By the end you should know</h4><ul class="objectives">${p.learn.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}
         <div><h4 class="eyebrow" style="margin:0 0 6px">Resources</h4><ul class="links">${p.res.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>
         <div class="btn-row">${projectLinks(p)}</div>
-        <div class="btn-row"><button class="btn primary" data-toggle="${code.key}">✓ Mark session done</button><a class="btn" href="#curriculum/${encodeURIComponent(p.id)}">Project page</a></div>
+        <div class="btn-row"><button class="btn action" data-toggle="${code.key}">✓ Mark session done</button><a class="btn" href="#curriculum/${encodeURIComponent(p.id)}">Project page</a></div>
+        ${practiceButton(p.id)}
         <p class="tip">Open the reference README for the exact task list. Do every task yourself first — only peek at the solution code when you're truly stuck, then rewrite it in your own words.</p>
       </section>`;
     } else {
@@ -222,7 +233,8 @@
             ${jp.day.stage === "Kana" ? `<li>45 min · ${jp.day.tasks.map(esc).join(". Then: ")}</li>` : jp.day.tasks.map((x, k) => `<li>${k === 0 ? "30 min · " : "15 min · "}${esc(x)}</li>`).join("")}
           </ul></div>
           <div><h4 class="eyebrow" style="margin:0 0 6px">Resources</h4><ul class="links">${jp.day.res.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>
-          <div class="btn-row"><button class="btn primary" data-toggle="${jp.key}">✓ Mark day done</button><a class="btn" href="#japanese">Japanese plan</a></div>
+          <div class="btn-row"><button class="btn action" data-toggle="${jp.key}">✓ Mark day done</button><a class="btn" href="#japanese">Japanese plan</a></div>
+          ${jpPracticeButton(jp.i)}
         </section>`;
       } else {
         html += `<section class="card today-card"><div class="big-title">🎌 Japanese plan complete — おめでとう!</div></section>`;
@@ -320,7 +332,7 @@
           <div class="proj-body">
             <div><h4>You'll learn</h4><ul class="objectives">${p.learn.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
               <h4 style="margin-top:14px">Resources</h4><ul class="links">${p.res.map((r) => `<li>${link(r)}</li>`).join("")}</ul>
-              <div class="btn-row" style="margin-top:14px">${projectLinks(p)}</div></div>
+              <div class="btn-row" style="margin-top:14px">${projectLinks(p)}</div>${practiceButton(p.id, true)}</div>
             <div><h4>Sessions</h4>${s.map((x) => checkRow(x.key, x.done, `${esc(sessionPlan(p, x.i))} <span class="muted small">· ${fmt(x.date)}</span>`)).join("")}
               <div class="btn-row" style="margin-top:8px"><button class="btn sm" data-markall="${esc(id)}" data-val="${all ? 0 : 1}">${all ? "Un-mark all" : "Mark whole project done"}</button></div></div>
           </div></details>`;
@@ -339,7 +351,10 @@
       if (!st || st.name !== s.day.stage) { st = { name: s.day.stage, items: [] }; stages.push(st); }
       st.items.push(s);
     }
-    let html = `<h1>Japanese <span class="jp muted" style="font-weight:500">日本語</span></h1>
+    const nextJp = firstUndone(JPD);
+    let html = `<section class="hero"><canvas data-pixel="hills" data-seed="11" aria-hidden="true"></canvas>
+      <div class="hero-in"><h1><span class="mark-soft" style="color:#2a3f8f">Learn Japanese,</span><br><span class="mark-soft" style="color:#2a3f8f">one hour a day <span class="jp">日本語</span></span></h1>
+      ${nextJp ? `<div class="btn-row"><a class="btn primary chev" href="#jp/${nextJp.i}">Today: ${esc(nextJp.day.title)}</a></div>` : ""}</div></section>
       <p class="lead">One hour a day, from zero to roughly JLPT N4, using only free material: kana first, then the Japan Foundation's IRODORI course (the official A1–A2 textbook, free PDFs + audio), with Anki vocabulary and plenty of listening.</p>
       <div class="stat-row"><div class="stat"><div class="v">${d}/${JPD.length}</div><div class="l">days done</div></div>
       <div class="stat"><div class="v">${pct(d, JPD.length)}%</div><div class="l">complete</div></div>
@@ -349,12 +364,12 @@
         <li><strong>30 min – Main lesson.</strong> Kana in weeks 1–2, then IRODORI lessons. Always listen to the audio and say things out loud.</li>
         <li><strong>15 min – Listening/reading.</strong> NHK Easy Japanese lessons, Comprehensible Japanese videos, and later NHK News Web Easy.</li></ul>
         <p class="tip" style="margin-top:12px">First, download the IRODORI Starter textbook + audio from the IRODORI site (free, no account needed).</p></div>
-      <h2>Stages</h2><div class="stack">`;
+      <h2>Stages</h2><div class="stack flush">`;
     for (const st of stages) {
       const sd = st.items.filter((x) => x.done).length;
       html += `<details class="proj"><summary><div class="proj-title">${sd === st.items.length ? `<span class="tick">✔</span>` : ""}${esc(st.name)}</div><span class="chip">${st.items.length} day${st.items.length > 1 ? "s" : ""}</span>
         <div class="proj-meta">${bar(pct(sd, st.items.length), "var(--a-jp)")}<span>${sd}/${st.items.length}</span><span>· ${fmt(st.items[0].date)} → ${fmt(st.items[st.items.length - 1].date)}</span></div></summary>
-        <div style="padding:4px 16px 16px">${st.items.map((x) => checkRow(x.key, x.done, `<strong>${esc(x.day.title)}</strong> <span class="muted small">· ${fmt(x.date)}</span><div class="small muted">${x.day.tasks.map(esc).join(" · ")}</div>`)).join("")}</div></details>`;
+        <div style="padding:4px 16px 16px">${st.items.map((x) => `<div class="jp-row">${checkRow(x.key, x.done, `<strong>${esc(x.day.title)}</strong> <span class="muted small">· ${fmt(x.date)}</span><div class="small muted">${x.day.tasks.map(esc).join(" · ")}</div>`)}<a class="btn sm" href="#jp/${x.i}">✍️ Practice</a></div>`).join("")}</div></details>`;
     }
     html += `</div><h2>Free resources</h2><div class="grid-3">${JP.resources.map((g) => `<div class="card"><h3>${esc(g.group)}</h3><ul class="links">${g.items.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>`).join("")}</div>`;
     return html;
@@ -380,6 +395,57 @@
       <h2>About</h2><div class="card small muted"><p style="margin-top:0">Curriculum order follows the ALX Software Engineering programme (built on Holberton School's). The official task pages are on the ALX/Holberton intranet, which needs a login, so each project links to a public student repo whose README lists the tasks. Session counts are estimates for 2-hour days.</p></div>`;
   };
 
+  /* ---------------- practice ---------------- */
+  function practiceButton(pid, block) {
+    const s = window.Practice && window.Practice.stats(pid);
+    if (!s) return "";
+    const label = `📝 Practice: ${s.quiz ? `${s.quiz} quiz question${s.quiz > 1 ? "s" : ""}` : ""}${s.quiz && s.tasks ? " + " : ""}${s.tasks ? `${s.tasks} task${s.tasks > 1 ? "s" : ""}` : ""}`;
+    return `<div class="btn-row"${block ? ' style="margin-top:10px"' : ""}><a class="btn practice-btn" href="#practice/${encodeURIComponent(pid)}">${label}</a>${s.qDone || s.tPassed ? `<span class="chip ${s.pct === 100 ? "ok" : ""}">${s.pct}% done</span>` : ""}</div>`;
+  }
+  function jpPracticeButton(i) {
+    const s = window.Practice && window.Practice.jpDayStats(i);
+    if (!s) return "";
+    return `<div class="btn-row"><a class="btn practice-btn" href="#jp/${i}">✍️ Draw today's characters &amp; quiz</a><span class="chip ${s.drawn === s.total ? "ok" : ""}">${s.drawn}/${s.total} drawn</span></div>`;
+  }
+
+  views.practice = (pid) => {
+    if (pid && byId[pid]) {
+      const p = byId[pid];
+      return `<div class="crumbs"><a href="#practice">Practice</a> › <a href="#curriculum/${encodeURIComponent(pid)}">${esc(p.title)}</a></div>
+        <h1>${esc(p.title)}</h1><p class="lead">Answer the quiz questions, then solve the tasks. Each task is checked automatically, like the ALX checker. Your code is saved in this browser as you type.</p>
+        <div class="btn-row" style="margin-bottom:16px">${projectLinks(p)}</div>
+        <div id="practice-root">${window.Practice.projectPage(pid, p)}</div>`;
+    }
+    let html = `<h1><span class="mark">Practice</span></h1><p class="lead">ALX-style quiz questions and auto-checked tasks for every project. C is compiled online. Python, JavaScript and SQL run in your browser. Shell answers are pattern-checked. Server work is a checklist you tick yourself.</p>`;
+    const shown = new Set();
+    for (const t of activeTracks()) {
+      const pids = t.projects.filter((id) => byId[id] && !shown.has(id) && (window.EX || {})[id]);
+      pids.forEach((id) => shown.add(id));
+      if (!pids.length) continue;
+      html += `<section class="track"><h2>${esc(t.name)}</h2><div class="practice-grid">${pids.map((id) => {
+        const s = window.Practice.stats(id), p = byId[id];
+        return `<a class="practice-tile" href="#practice/${encodeURIComponent(id)}" style="--c:var(--a-${p.area})">
+          <span class="pt-title">${esc(p.title)}</span>
+          <span class="muted small">${s.quiz} Q · ${s.tasks} task${s.tasks === 1 ? "" : "s"}</span>${bar(s.pct, `var(--a-${p.area})`)}</a>`;
+      }).join("")}</div></section>`;
+    }
+    return html;
+  };
+  views.practice.after = (pid) => {
+    const root = document.getElementById("practice-root");
+    if (root && pid) window.Practice.bindProject(root, pid);
+  };
+
+  views.jp = (arg) => {
+    const i = Math.max(0, Math.min(JP.days.length - 1, parseInt(arg, 10) || 0));
+    return `<div id="jp-root">${window.Practice.jpPage(i)}</div>
+      <div class="pager"><a class="btn sm" href="#jp/${Math.max(0, i - 1)}">← Previous day</a><a class="btn sm" href="#jp/${Math.min(JP.days.length - 1, i + 1)}">Next day →</a></div>`;
+  };
+  views.jp.after = (arg) => {
+    const i = Math.max(0, Math.min(JP.days.length - 1, parseInt(arg, 10) || 0));
+    window.Practice.bindJp(document.getElementById("jp-root"), i);
+  };
+
   /* ---------------- render & routing ---------------- */
   function route() {
     const [v, arg] = (location.hash.slice(1) || "today").split("/");
@@ -390,21 +456,25 @@
     const el = document.getElementById("view");
     const y = window.scrollY;
     el.innerHTML = views[view](arg);
-    document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === view));
+    if (views[view].after) views[view].after(arg);
+    if (window.PixelArt) window.PixelArt.paintAll(el);
+    const navView = view === "jp" ? "japanese" : view;
+    document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === navView));
     renderSide();
     if (view === "settings") { const th = document.getElementById("theme"); if (th) th.value = document.documentElement.dataset.theme || ""; }
-    if (render.lastView === view) window.scrollTo(0, y);
+    if (render.lastView === view + (arg || "")) window.scrollTo(0, y);
     else if (arg) { const t = document.getElementById("p-" + arg); if (t) t.scrollIntoView({ block: "start" }); }
     else window.scrollTo(0, 0);
-    render.lastView = view;
+    render.lastView = view + (arg || "");
   }
   function renderSide() {
     const cd = CODE.filter((s) => s.done).length, jd = JPD.filter((s) => s.done).length;
     const st = streak();
     document.getElementById("side-stats").innerHTML = `
-      <div class="side-stat"><div class="lbl"><span>💻 Coding</span><span>${pct(cd, CODE.length)}%</span></div>${bar(pct(cd, CODE.length))}</div>
-      ${state.settings.japanese ? `<div class="side-stat"><div class="lbl"><span>🇯🇵 Japanese</span><span>${pct(jd, JPD.length)}%</span></div>${bar(pct(jd, JPD.length), "var(--a-jp)")}</div>` : ""}
-      <div class="side-stat"><div class="lbl"><span>🔥 Streak</span><span>${st} day${st === 1 ? "" : "s"}</span></div></div>`;
+      <span class="mini-stat">code <b>${pct(cd, CODE.length)}%</b></span>
+      ${state.settings.japanese ? `<span class="mini-stat">日本語 <b>${pct(jd, JPD.length)}%</b></span>` : ""}
+      <span class="mini-stat">streak <b>${st}d</b></span>
+      <a class="btn primary chev sm" href="#today">Today</a>`;
   }
 
   document.addEventListener("click", (e) => {
@@ -455,5 +525,6 @@
     }
   });
   window.addEventListener("hashchange", render);
+  document.addEventListener("practice-change", renderSide);
   load(); rebuild(); render();
 })();

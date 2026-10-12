@@ -5,38 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hydra School</title>
   <meta name="description" content="A day-by-day study planner for the ALX / Holberton software engineering curriculum and beginner Japanese.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23ff4d00'/><text x='16' y='24' font-family='Arial' font-weight='700' font-size='22' fill='white' text-anchor='middle'>H</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Noto+Sans+JP:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&family=Noto+Sans+JP:wght@500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
   <script>
     try { var t = localStorage.getItem("hydra-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
   </script>
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-mark">🐉</span>
-        <div>
-          <div class="brand-name">Hydra School</div>
-          <div class="brand-sub">ALX / Holberton · 日本語</div>
-        </div>
-      </div>
-      <nav class="nav" id="nav">
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="brand" href="#today" aria-label="Hydra School home"><span class="brand-mark">H</span><span class="brand-name">Hydra School</span></a>
+      <nav class="nav" id="nav" aria-label="Main">
         <a href="#today" data-view="today"><span class="ico">☀️</span><span>Today</span></a>
         <a href="#plan" data-view="plan"><span class="ico">🗓️</span><span>Schedule</span></a>
         <a href="#curriculum" data-view="curriculum"><span class="ico">📚</span><span>Curriculum</span></a>
+        <a href="#practice" data-view="practice"><span class="ico">📝</span><span>Practice</span></a>
         <a href="#japanese" data-view="japanese"><span class="ico">🇯🇵</span><span>Japanese</span></a>
         <a href="#settings" data-view="settings"><span class="ico">⚙️</span><span>Settings</span></a>
       </nav>
-      <div class="side-stats" id="side-stats"></div>
-    </aside>
+      <div class="top-right" id="side-stats"></div>
+    </div>
+  </header>
+  <div class="frame">
     <main class="main" id="view" tabindex="-1"></main>
   </div>
   <script src="assets/curriculum.js"></script>
   <script src="assets/japanese.js"></script>
+  <script src="assets/jp/data.js"></script>
+  <script src="assets/jp/strokes.js"></script>
+  <script src="assets/exercises/foundations-c.js"></script>
+  <script src="assets/exercises/foundations-shell.js"></script>
+  <script src="assets/exercises/foundations-python.js"></script>
+  <script src="assets/exercises/foundations-web.js"></script>
+  <script src="assets/exercises/backend.js"></script>
+  <script src="assets/exercises/frontend.js"></script>
+  <script src="assets/exercises/ml.js"></script>
+  <script src="assets/exercises/lowlevel.js"></script>
+  <script src="assets/pixel.js"></script>
+  <script src="assets/practice.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>
