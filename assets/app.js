@@ -367,7 +367,7 @@
       <h2>Stages</h2><div class="stack flush">`;
     for (const st of stages) {
       const sd = st.items.filter((x) => x.done).length;
-      html += `<details class="proj"><summary><div class="proj-title">${sd === st.items.length ? `<span class="tick">${icon("check-circle")}</span>` : ""}${esc(st.name)}</div><span class="chip">${st.items.length} day${st.items.length > 1 ? "s" : ""}</span>
+      html += `<details class="proj" id="stage-${stages.indexOf(st)}"><summary><div class="proj-title">${sd === st.items.length ? `<span class="tick">${icon("check-circle")}</span>` : ""}${esc(st.name)}</div><span class="chip">${st.items.length} day${st.items.length > 1 ? "s" : ""}</span>
         <div class="proj-meta">${bar(pct(sd, st.items.length), "var(--a-jp)")}<span>${sd}/${st.items.length}</span><span>· ${fmt(st.items[0].date)} → ${fmt(st.items[st.items.length - 1].date)}</span></div></summary>
         <div style="padding:4px 16px 16px">${st.items.map((x) => `<div class="jp-row">${checkRow(x.key, x.done, `<strong>${esc(x.day.title)}</strong> <span class="muted small">· ${fmt(x.date)}</span><div class="small muted">${x.day.tasks.map(esc).join(" · ")}</div>`)}<a class="btn sm" href="#jp/${x.i}">${icon("pen")} Practice</a></div>`).join("")}</div></details>`;
     }
@@ -455,7 +455,10 @@
     const { view, arg } = route();
     const el = document.getElementById("view");
     const y = window.scrollY;
+    const sameView = render.lastView === view + (arg || "");
+    const openIds = sameView ? [...el.querySelectorAll("details[open][id]")].map((d) => d.id) : [];
     el.innerHTML = views[view](arg);
+    openIds.forEach((id) => { const d = document.getElementById(id); if (d) d.open = true; });
     if (views[view].after) views[view].after(arg);
     if (window.PixelArt) window.PixelArt.paintAll(el);
     const navView = view === "jp" ? "japanese" : view;
