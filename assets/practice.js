@@ -229,6 +229,25 @@
   }
 
   // ---------- JavaScript (Node-like) in a worker ----------
+  // Turns the ES-module syntax ALX projects use (via Babel) into CommonJS for the worker.
+  function esmToCjs(src) {
+    const tail = [];
+    let s = String(src).replace(/^#!.*/, "");
+    s = s.replace(/^\s*import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"];?/gm, "const $1 = require('$2');");
+    s = s.replace(/^\s*import\s+(\w+)\s*,\s*\{([^}]*)\}\s*from\s+['"]([^'"]+)['"];?/gm, (m, d, names, p) => "const $$m = require('" + p + "'); const " + d + " = $$m.default !== undefined ? $$m.default : $$m; const {" + names.replace(/(\w+)\s+as\s+(\w+)/g, "$1: $2") + "} = $$m;");
+    s = s.replace(/^\s*import\s+\{([^}]*)\}\s*from\s+['"]([^'"]+)['"];?/gm, (m, names, p) => "const {" + names.replace(/(\w+)\s+as\s+(\w+)/g, "$1: $2") + "} = require('" + p + "');");
+    s = s.replace(/^\s*import\s+(\w+)\s+from\s+['"]([^'"]+)['"];?/gm, (m, d, p) => "const " + d + " = (function (m) { return m && m.default !== undefined ? m.default : m; })(require('" + p + "'));");
+    s = s.replace(/^\s*import\s+['"]([^'"]+)['"];?/gm, "require('$1');");
+    s = s.replace(/^export\s+default\s+(async\s+)?function\s*\*?\s*(\w+)/gm, (m, a, n) => { tail.push("module.exports.default = " + n + ";"); return (a || "") + "function " + n; });
+    s = s.replace(/^export\s+default\s+class\s+(\w+)/gm, (m, n) => { tail.push("module.exports.default = " + n + ";"); return "class " + n; });
+    s = s.replace(/^export\s+default\s+/gm, "module.exports.default = ");
+    s = s.replace(/^export\s+(async\s+)?function\s*\*?\s*(\w+)/gm, (m, a, n) => { tail.push("module.exports." + n + " = " + n + ";"); return (a || "") + "function " + n; });
+    s = s.replace(/^export\s+class\s+(\w+)/gm, (m, n) => { tail.push("module.exports." + n + " = " + n + ";"); return "class " + n; });
+    s = s.replace(/^export\s+(const|let|var)\s+(\w+)/gm, (m, k, n) => { tail.push("module.exports." + n + " = " + n + ";"); return k + " " + n; });
+    s = s.replace(/^export\s*\{([^}]*)\};?/gm, (m, names) => { names.split(",").map((x) => x.trim()).filter(Boolean).forEach((x) => { const [a, b] = x.split(/\s+as\s+/); tail.push("module.exports." + (b || a) + " = " + a + ";"); }); return ""; });
+    return s + "\n" + tail.join("\n");
+  }
+
   const JS_WORKER = `
     function inspect(v, depth, inner) {
       depth = depth || 0;
@@ -256,6 +275,7 @@
       if (!keys.length) return name + "{}";
       return name + "{ " + keys.map((k) => (/^[A-Za-z_$][\\w$]*$/.test(k) ? k : "'" + k + "'") + ": " + inspect(v[k], depth + 1, true)).join(", ") + " }";
     }
+    const esmToCjs = ${esmToCjs.toString()};
     onmessage = async (e) => {
       const { id, files, entry, argv } = e.data;
       let out = "";
@@ -284,7 +304,7 @@
         if (!(f in files)) throw new Error("Cannot find module '" + name + "' (only your project files are available here)");
         if (cache[f]) return cache[f].exports;
         const module = { exports: {} }; cache[f] = module;
-        const fn = new Function("module", "exports", "require", "console", "process", "__filename", "__dirname", String(files[f]).replace(/^#!.*/, ""));
+        const fn = new Function("module", "exports", "require", "console", "process", "__filename", "__dirname", esmToCjs(files[f]));
         fn(module, module.exports, req, con, proc, "/work/" + f, "/work");
         return module.exports;
       }
@@ -362,7 +382,7 @@
     return new Promise((resolve) => {
       let frame = host.querySelector("iframe.preview");
       if (!frame) { frame = document.createElement("iframe"); frame.className = "preview"; frame.title = "Preview"; host.appendChild(frame); }
-      frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+      frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-forms");
       frame.onload = () => setTimeout(async () => {
         const d = frame.contentDocument, w = frame.contentWindow;
         const results = [];
