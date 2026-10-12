@@ -424,7 +424,7 @@
         return `<div class="q">
           <div class="q-text"><span class="muted">Q${i + 1}.</span> ${q[0]}</div>
           <div class="q-opts">${q[1].map((o, j) => `<button class="opt ${answered ? (j === q[2] ? "right" : j === a ? "wrong" : "") : ""}" data-qa="${i}:${j}" ${answered ? "disabled" : ""}>${o}</button>`).join("")}</div>
-          ${answered ? `<div class="q-why ${a === q[2] ? "ok" : "bad"}">${a === q[2] ? "✓ Correct." : "✗ Not quite."} ${q[3] || ""}</div>` : ""}
+          ${answered ? `<div class="q-why ${a === q[2] ? "ok" : "bad"}">${a === q[2] ? icon("check") + " Correct." : icon("x") + " Not quite."} ${q[3] || ""}</div>` : ""}
         </div>`;
       }).join("")}
       ${done ? `<div><button class="btn sm" data-quiz-reset="${esc(pid)}">Retake quiz</button></div>` : ""}
@@ -439,7 +439,7 @@
     const fileLabel = t.lang === "sql" ? (t.file || `${i}-query.sql`) : t.file || "";
     return `<section class="card task" id="task-${esc(id)}" data-task="${esc(id)}">
       <div class="practice-head"><h3>${i}. ${esc(t.t)}</h3>
-        <div class="btn-row"><span class="chip">${LANG_NAME[t.lang]}</span>${t.adv ? `<span class="chip warn">advanced</span>` : ""}${st.passed ? `<span class="chip ok">✓ passed</span>` : st.tried ? `<span class="chip warn">not yet</span>` : ""}</div></div>
+        <div class="btn-row"><span class="chip">${LANG_NAME[t.lang]}</span>${t.adv ? `<span class="chip warn">advanced</span>` : ""}${st.passed ? `<span class="chip ok">${icon("check")} passed</span>` : st.tried ? `<span class="chip warn">not yet</span>` : ""}</div></div>
       <div class="task-body">${t.p}</div>
       ${t.header ? `<details class="small"><summary>Prototypes available (main.h)</summary><pre class="code">${esc(t.header.trim())}</pre></details>` : ""}
       ${(t.tests || []).some((x) => x.main) ? `<details class="small"><summary>Test file used by the checker</summary>${t.tests.filter((x) => x.main).map((x) => `<pre class="code">${esc(x.main.trim())}</pre><div class="muted small">Expected output:</div><pre class="code">${esc(x.out)}</pre>`).join("")}</details>` : ""}
@@ -447,7 +447,7 @@
       <div class="file-label mono">${esc(fileLabel)}</div>
       <textarea class="code-input" spellcheck="false" autocapitalize="off" autocomplete="off" data-editor="${esc(id)}" aria-label="Your code for task ${i}">${esc(st.code != null ? st.code : t.start || "")}</textarea>
       <div class="btn-row">
-        <button class="btn primary" data-run="${esc(id)}">▶ Check my code</button>
+        <button class="btn primary" data-run="${esc(id)}">${icon("play")} Check my code</button>
         <button class="btn sm" data-reset-code="${esc(id)}">Reset</button>
         ${t.sol ? `<button class="btn sm" data-show-sol="${esc(id)}">${st.passed || (st.tries || 0) >= 3 ? "Show a solution" : "Show a solution (after 3 tries)"}</button>` : ""}
         <span class="muted small run-status" aria-live="polite"></span>
@@ -460,8 +460,8 @@
 
   function resultsHTML(results, lang) {
     const passed = results.filter((r) => r.ok).length;
-    return `<div class="res-summary ${passed === results.length ? "ok" : "bad"}">${passed === results.length ? "✓ All checks passed" : `✗ ${results.length - passed} of ${results.length} check${results.length > 1 ? "s" : ""} failed`}</div>` +
-      results.map((r, k) => `<div class="res ${r.ok ? "ok" : "bad"}"><div class="res-title">${r.ok ? "✓" : "✗"} ${esc(r.label || "Check " + (k + 1))}</div>
+    return `<div class="res-summary ${passed === results.length ? "ok" : "bad"}">${passed === results.length ? icon("check") + " All checks passed" : `${icon("x")} ${results.length - passed} of ${results.length} check${results.length > 1 ? "s" : ""} failed`}</div>` +
+      results.map((r, k) => `<div class="res ${r.ok ? "ok" : "bad"}"><div class="res-title">${r.ok ? icon("check") : icon("x")} ${esc(r.label || "Check " + (k + 1))}</div>
         ${!r.ok && r.error ? `<pre class="code err">${esc(r.error)}</pre>` : ""}
         ${!r.ok && lang !== "html" && r.expected !== undefined ? `<div class="diff"><div><div class="muted small">Expected</div><pre class="code">${esc(r.expected)}</pre></div><div><div class="muted small">Got</div><pre class="code">${esc(r.got)}</pre></div></div>` : ""}
         ${!r.ok && r.wantExit !== undefined && r.exit !== r.wantExit ? `<div class="small">Exit status: expected ${r.wantExit}, got ${r.exit}</div>` : ""}
@@ -510,7 +510,7 @@
   function updateHead(card, st) {
     const row = card.querySelector(".practice-head .btn-row");
     row.querySelectorAll(".chip.ok,.chip.warn:not(:first-child)").forEach((c) => { if (/passed|not yet/.test(c.textContent)) c.remove(); });
-    row.insertAdjacentHTML("beforeend", st.passed ? `<span class="chip ok">✓ passed</span>` : `<span class="chip warn">not yet</span>`);
+    row.insertAdjacentHTML("beforeend", st.passed ? `<span class="chip ok">${icon("check")} passed</span>` : `<span class="chip warn">not yet</span>`);
     const sb = card.querySelector("[data-show-sol]");
     if (sb && (st.passed || st.tries >= 3)) sb.textContent = "Show a solution";
   }
@@ -647,10 +647,10 @@
         <div class="pad-side">
           <div class="pad-status" aria-live="polite">Stroke 1 of ${strokes.length}</div>
           <div class="btn-row">
-            <button class="btn sm" data-pad="hint">💡 Hint</button>
+            <button class="btn sm" data-pad="hint">${icon("hint")} Hint</button>
             <button class="btn sm" data-pad="outline">${outline ? "Hide" : "Show"} outline</button>
-            <button class="btn sm" data-pad="animate">▶ Stroke order</button>
-            <button class="btn sm" data-pad="restart">↺ Restart</button>
+            <button class="btn sm" data-pad="animate">${icon("play")} Stroke order</button>
+            <button class="btn sm" data-pad="restart">${icon("restart")} Restart</button>
           </div>
         </div></div>`;
     const svg = host.querySelector(".pad-svg"), cv = host.querySelector(".pad-canvas"), pad = host.querySelector(".pad");
@@ -688,13 +688,13 @@
       if (ok) {
         inkG.insertAdjacentHTML("beforeend", `<path d="${strokes[next]}"/>`); hintG.innerHTML = ""; next++; misses = 0;
         if (next === strokes.length) {
-          status.innerHTML = `<span class="ok-text">✓ Done!</span> ${totalMisses ? `${totalMisses} mistake${totalMisses > 1 ? "s" : ""}` : "Perfect — no mistakes"}`;
+          status.innerHTML = `<span class="ok-text">${icon("check")} Done!</span> ${totalMisses ? `${totalMisses} mistake${totalMisses > 1 ? "s" : ""}` : "Perfect — no mistakes"}`;
           opts.onDone && opts.onDone(totalMisses);
         } else status.textContent = `Stroke ${next + 1} of ${strokes.length}`;
       } else {
         misses++; totalMisses++;
-        const why = sc.rev < sc.avg * 0.6 && sc.rev < tol ? "Wrong direction — strokes go top→bottom, left→right." : startD >= 24 ? "That stroke starts in a different place." : "Not quite — that's not the next stroke in the order.";
-        status.innerHTML = `<span class="bad-text">✗</span> ${why} (stroke ${next + 1} of ${strokes.length})`;
+        const why = sc.rev < sc.avg * 0.6 && sc.rev < tol ? "Wrong direction — strokes go top to bottom, left to right." : startD >= 24 ? "That stroke starts in a different place." : "Not quite — that's not the next stroke in the order.";
+        status.innerHTML = `<span class="bad-text">${icon("x")}</span> ${why} (stroke ${next + 1} of ${strokes.length})`;
         if (misses >= 2) showHint();
       }
     };
@@ -791,15 +791,15 @@
     return `<div class="crumbs"><a href="#japanese">Japanese</a> › ${esc(day.stage)}</div>
       <h1>${esc(day.title)}</h1><p class="lead">Day ${dayIndex + 1}. Draw each character stroke by stroke. The checker follows the official stroke order and direction. Then do the quick quiz.</p>
       <div class="practice-score card"><div><div class="big-title">${drawnCount}/${plan.draw.length}</div><div class="muted small">characters drawn</div></div><div class="bar" style="flex:1;min-width:140px"><span style="width:${Math.round((drawnCount / plan.draw.length) * 100)}%"></span></div></div>
-      <h2>✍️ Draw</h2>
+      <h2>${icon("pen")} Draw</h2>
       <div class="char-tabs" role="tablist">${plan.draw.map((c, i) => `<button class="char-tab ${st.drawn[c] ? "done" : ""}" data-char="${i}" role="tab"><span class="jp">${c}</span></button>`).join("")}</div>
       <div class="card draw-card">
         <div class="draw-info"><div class="jp huge-char" data-cur-char></div><div><div class="big-title" data-cur-info></div><label class="check small"><input type="checkbox" data-recall> Recall mode (no outline — draw from memory)</label></div></div>
         <div data-pad-host></div>
-        <div class="btn-row"><button class="btn sm" data-char-nav="-1">← Previous</button><button class="btn sm" data-char-nav="1">Next →</button></div>
+        <div class="btn-row"><button class="btn sm" data-char-nav="-1">${icon("arrow-left")} Previous</button><button class="btn sm" data-char-nav="1">Next ${icon("arrow-right")}</button></div>
       </div>
       <p class="tip">Tip: use a finger or stylus on a phone or tablet. On a laptop, a mouse works fine.</p>
-      <h2>🧠 Quick quiz</h2>
+      <h2>${icon("quiz")} Quick quiz</h2>
       ${quizHTML(qid, quiz)}
       ${dayIndex >= 14 ? `<p class="tip">IRODORI's own exercises have answer keys in the free "Answers & scripts" PDFs. Check the listening and reading tasks there.</p>` : ""}`;
   }

@@ -160,8 +160,8 @@
   function projectLinks(p) {
     const out = [];
     const r = repoUrl(p);
-    if (r) out.push(`<a class="btn sm" href="${r}" target="_blank" rel="noopener">📄 Tasks (reference README)</a>`);
-    out.push(`<a class="btn sm" href="${searchUrl(p)}" target="_blank" rel="noopener">🔎 Other students' versions</a>`);
+    if (r) out.push(`<a class="btn sm" href="${r}" target="_blank" rel="noopener">${icon("file-text")} Tasks (reference README)</a>`);
+    out.push(`<a class="btn sm" href="${searchUrl(p)}" target="_blank" rel="noopener">${icon("search")} Other students' versions</a>`);
     return out.join("");
   }
   const trackOf = (id) => TRACKS.find((t) => t.id === id);
@@ -194,7 +194,7 @@
         <span class="meta">${clock}${restDay ? " · rest day" : ""}${doneToday ? ` · ${doneToday} done today` : ""}</span>
         <h1><span class="mark">${greeting}.</span><br><span class="mark">${headline}</span></h1>
         <p class="sub"><span class="mark-soft">Two hours of code and one hour of Japanese. Show up today and the schedule takes care of the rest.</span></p>
-        <div class="btn-row">${code ? `<a class="btn primary chev" href="#practice/${encodeURIComponent(code.pid)}">Start practising</a>` : ""}${jp ? `<a class="btn" href="#jp/${jp.i}">Japanese drills ✍️</a>` : ""}</div>
+        <div class="btn-row">${code ? `<a class="btn primary chev" href="#practice/${encodeURIComponent(code.pid)}">Start practising</a>` : ""}${jp ? `<a class="btn" href="#jp/${jp.i}">${icon("pen")} Japanese drills</a>` : ""}</div>
       </div></section>`;
 
     if (cBehind + jBehind > 0) {
@@ -208,36 +208,36 @@
       const p = byId[code.pid], tr = trackOf(code.track);
       const ahead = code.date > t;
       html += `<section class="card today-card" style="--card-accent:var(--a-${p.area})">
-        <div class="eyebrow">💻 Coding · 2 hours ${areaChip(p.area)}<span class="chip">${esc(tr.short)}</span>${ahead ? `<span class="chip ok">ahead · planned ${fmt(code.date)}</span>` : code.date < t ? `<span class="chip warn">planned ${fmt(code.date)}</span>` : ""}</div>
+        <div class="eyebrow">${icon("code")} Coding · 2 hours ${areaChip(p.area)}<span class="chip">${esc(tr.short)}</span>${ahead ? `<span class="chip ok">ahead · planned ${fmt(code.date)}</span>` : code.date < t ? `<span class="chip warn">planned ${fmt(code.date)}</span>` : ""}</div>
         <div><div class="big-title">${esc(p.title)}</div><div class="muted small">Session ${code.i + 1} of ${code.n}</div></div>
         <div class="session-task">${esc(sessionPlan(p, code.i))}</div>
         ${code.i === 0 ? `<div><h4 class="eyebrow" style="margin:0 0 6px">By the end you should know</h4><ul class="objectives">${p.learn.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>` : ""}
         <div><h4 class="eyebrow" style="margin:0 0 6px">Resources</h4><ul class="links">${p.res.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>
         <div class="btn-row">${projectLinks(p)}</div>
-        <div class="btn-row"><button class="btn action" data-toggle="${code.key}">✓ Mark session done</button><a class="btn" href="#curriculum/${encodeURIComponent(p.id)}">Project page</a></div>
+        <div class="btn-row"><button class="btn action" data-toggle="${code.key}">${icon("check")} Mark session done</button><a class="btn" href="#curriculum/${encodeURIComponent(p.id)}">Project page</a></div>
         ${practiceButton(p.id)}
         <p class="tip">Open the reference README for the exact task list. Do every task yourself first — only peek at the solution code when you're truly stuck, then rewrite it in your own words.</p>
       </section>`;
     } else {
-      html += `<section class="card today-card"><div class="big-title">🎓 All coding sessions complete!</div><p>Incredible work. Turn on another specialization in Settings to keep going.</p></section>`;
+      html += `<section class="card today-card"><div class="big-title">${icon("graduation")} All coding sessions complete!</div><p>Incredible work. Turn on another specialization in Settings to keep going.</p></section>`;
     }
     // Japanese card
     if (state.settings.japanese) {
       if (jp) {
         const ahead = jp.date > t;
         html += `<section class="card today-card" style="--card-accent:var(--a-jp)">
-          <div class="eyebrow">🇯🇵 Japanese · 1 hour <span class="chip">${esc(jp.day.stage)}</span>${ahead ? `<span class="chip ok">ahead · planned ${fmt(jp.date)}</span>` : jp.date < t ? `<span class="chip warn">planned ${fmt(jp.date)}</span>` : ""}</div>
+          <div class="eyebrow">${icon("language")} Japanese · 1 hour <span class="chip">${esc(jp.day.stage)}</span>${ahead ? `<span class="chip ok">ahead · planned ${fmt(jp.date)}</span>` : jp.date < t ? `<span class="chip warn">planned ${fmt(jp.date)}</span>` : ""}</div>
           <div><div class="big-title">${esc(jp.day.title)}</div><div class="muted small">Day ${jp.i + 1} of ${jp.n}</div></div>
           <div class="session-task"><ul>
             <li>15 min · Anki reviews${jp.i >= 6 ? " + 10 new Kaishi cards" : ""}</li>
             ${jp.day.stage === "Kana" ? `<li>45 min · ${jp.day.tasks.map(esc).join(". Then: ")}</li>` : jp.day.tasks.map((x, k) => `<li>${k === 0 ? "30 min · " : "15 min · "}${esc(x)}</li>`).join("")}
           </ul></div>
           <div><h4 class="eyebrow" style="margin:0 0 6px">Resources</h4><ul class="links">${jp.day.res.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>
-          <div class="btn-row"><button class="btn action" data-toggle="${jp.key}">✓ Mark day done</button><a class="btn" href="#japanese">Japanese plan</a></div>
+          <div class="btn-row"><button class="btn action" data-toggle="${jp.key}">${icon("check")} Mark day done</button><a class="btn" href="#japanese">Japanese plan</a></div>
           ${jpPracticeButton(jp.i)}
         </section>`;
       } else {
-        html += `<section class="card today-card"><div class="big-title">🎌 Japanese plan complete — おめでとう!</div></section>`;
+        html += `<section class="card today-card"><div class="big-title">${icon("award")} Japanese plan complete — おめでとう!</div></section>`;
       }
     }
     html += `</div>`;
@@ -272,10 +272,10 @@
 
     let html = `<h1>Schedule</h1><p class="lead">Your week-by-week plan. Coding: 2 h/day, Japanese: 1 h/day. Dates move if you shift the plan from the Today page. Finishes around <strong>${fmtMonth(lastDate)}</strong> (${totalWeeks} weeks).</p>`;
     const pager = `<div class="pager">
-      <button class="btn sm" data-week="${planWeekOffset - PER}" ${planWeekOffset <= 0 ? "disabled" : ""}>← Earlier</button>
+      <button class="btn sm" data-week="${planWeekOffset - PER}" ${planWeekOffset <= 0 ? "disabled" : ""}>${icon("arrow-left")} Earlier</button>
       <div class="btn-row"><button class="btn sm" data-week="${curWeek}">This week</button>
       <select class="btn sm" data-weekjump aria-label="Jump to month">${monthOptions(startMon, totalWeeks)}</select></div>
-      <button class="btn sm" data-week="${planWeekOffset + PER}" ${planWeekOffset + PER >= totalWeeks ? "disabled" : ""}>Later →</button></div>`;
+      <button class="btn sm" data-week="${planWeekOffset + PER}" ${planWeekOffset + PER >= totalWeeks ? "disabled" : ""}>Later ${icon("arrow-right")}</button></div>`;
     html += pager;
 
     for (let w = planWeekOffset; w < Math.min(totalWeeks, planWeekOffset + PER); w++) {
@@ -292,7 +292,7 @@
         html += `<div class="day-row ${date === t ? "today" : ""} ${rest ? "rest" : ""}">
           <div class="day-date">${fmt(date)}<span class="muted">${date === t ? "Today" : rest ? "Rest" : ""}</span></div>
           <div class="day-cell">${code.map((s) => { const p = byId[s.pid]; return checkRow(s.key, s.done, `<span class="ptitle">${esc(p.title)}</span> <span class="sub">${s.i + 1}/${s.n}</span><div class="sub">${esc(sessionPlan(p, s.i))}</div>`); }).join("") || (rest ? "" : `<span class="muted small">—</span>`)}</div>
-          <div class="day-cell">${jp.map((s) => checkRow(s.key, s.done, `<span class="ptitle">🇯🇵 ${esc(s.day.title)}</span><div class="sub">${esc(s.day.tasks[0])}</div>`)).join("")}</div>
+          <div class="day-cell">${jp.map((s) => checkRow(s.key, s.done, `<span class="ptitle">${esc(s.day.title)}</span><div class="sub">${esc(s.day.tasks[0])}</div>`)).join("")}</div>
         </div>`;
       }
       html += `</section>`;
@@ -326,7 +326,7 @@
         const p = byId[id], s = sessionsByPid[id] || [];
         const pd = s.filter((x) => x.done).length, all = pd === s.length && s.length > 0;
         html += `<details class="proj ${all ? "is-done" : ""}" id="p-${esc(id)}" ${focusId === id ? "open" : ""}>
-          <summary><div class="proj-title">${all ? `<span class="tick">✔</span>` : ""}${esc(p.title)} ${areaChip(p.area)}</div>
+          <summary><div class="proj-title">${all ? `<span class="tick">${icon("check-circle")}</span>` : ""}${esc(p.title)} ${areaChip(p.area)}</div>
           <span class="chip">${p.days} session${p.days > 1 ? "s" : ""}</span>
           <div class="proj-meta">${bar(pct(pd, s.length), `var(--a-${p.area})`)}<span>${pd}/${s.length}</span>${s.length ? `<span>· ${fmt(s[0].date)}${s.length > 1 ? ` → ${fmt(s[s.length - 1].date)}` : ""}</span>` : ""}</div></summary>
           <div class="proj-body">
@@ -367,9 +367,9 @@
       <h2>Stages</h2><div class="stack flush">`;
     for (const st of stages) {
       const sd = st.items.filter((x) => x.done).length;
-      html += `<details class="proj"><summary><div class="proj-title">${sd === st.items.length ? `<span class="tick">✔</span>` : ""}${esc(st.name)}</div><span class="chip">${st.items.length} day${st.items.length > 1 ? "s" : ""}</span>
+      html += `<details class="proj"><summary><div class="proj-title">${sd === st.items.length ? `<span class="tick">${icon("check-circle")}</span>` : ""}${esc(st.name)}</div><span class="chip">${st.items.length} day${st.items.length > 1 ? "s" : ""}</span>
         <div class="proj-meta">${bar(pct(sd, st.items.length), "var(--a-jp)")}<span>${sd}/${st.items.length}</span><span>· ${fmt(st.items[0].date)} → ${fmt(st.items[st.items.length - 1].date)}</span></div></summary>
-        <div style="padding:4px 16px 16px">${st.items.map((x) => `<div class="jp-row">${checkRow(x.key, x.done, `<strong>${esc(x.day.title)}</strong> <span class="muted small">· ${fmt(x.date)}</span><div class="small muted">${x.day.tasks.map(esc).join(" · ")}</div>`)}<a class="btn sm" href="#jp/${x.i}">✍️ Practice</a></div>`).join("")}</div></details>`;
+        <div style="padding:4px 16px 16px">${st.items.map((x) => `<div class="jp-row">${checkRow(x.key, x.done, `<strong>${esc(x.day.title)}</strong> <span class="muted small">· ${fmt(x.date)}</span><div class="small muted">${x.day.tasks.map(esc).join(" · ")}</div>`)}<a class="btn sm" href="#jp/${x.i}">${icon("pen")} Practice</a></div>`).join("")}</div></details>`;
     }
     html += `</div><h2>Free resources</h2><div class="grid-3">${JP.resources.map((g) => `<div class="card"><h3>${esc(g.group)}</h3><ul class="links">${g.items.map((r) => `<li>${link(r)}</li>`).join("")}</ul></div>`).join("")}</div>`;
     return html;
@@ -384,13 +384,13 @@
           <span class="muted small">Untick a day to make it a rest day (applies to both coding and Japanese).</span></div>
         <div class="field"><label>Specializations (in the order you'll do them, after Foundations)</label>
           <ul class="order-list">${s.tracks.map((x, i) => { const t = trackOf(x.id); return t ? `<li><input class="switch" type="checkbox" data-track="${x.id}" ${x.on ? "checked" : ""} aria-label="Include ${esc(t.name)}"><span class="name">${esc(t.name)}</span>
-            <button class="btn sm" data-move="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button><button class="btn sm" data-move="${i}" data-dir="1" ${i === s.tracks.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button></li>` : ""; }).join("")}</ul></div>
+            <button class="btn sm" data-move="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">${icon("arrow-up")}</button><button class="btn sm" data-move="${i}" data-dir="1" ${i === s.tracks.length - 1 ? "disabled" : ""} aria-label="Move down">${icon("arrow-down")}</button></li>` : ""; }).join("")}</ul></div>
         <div class="field"><label class="check"><input type="checkbox" id="jp-on" ${s.japanese ? "checked" : ""}><span>Include the Japanese track (1 h/day)</span></label></div>
         <div class="field"><label for="theme">Theme</label><select id="theme"><option value="">Match my device</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       </div>
       <h2>Backup</h2>
       <div class="card"><p class="muted" style="margin-top:0">Progress is stored only in this browser. Export a backup now and then (or to move to another device).</p>
-        <div class="btn-row"><button class="btn" id="export">⬇ Export progress</button><label class="btn">⬆ Import progress<input type="file" id="import" accept="application/json" hidden></label>
+        <div class="btn-row"><button class="btn" id="export">${icon("download")} Export progress</button><label class="btn">${icon("upload")} Import progress<input type="file" id="import" accept="application/json" hidden></label>
         <button class="btn" id="reset-anchors">Undo all plan shifts</button><button class="btn" id="reset" style="color:var(--warn)">Reset everything</button></div></div>
       <h2>About</h2><div class="card small muted"><p style="margin-top:0">Curriculum order follows the ALX Software Engineering programme (built on Holberton School's). The official task pages are on the ALX/Holberton intranet, which needs a login, so each project links to a public student repo whose README lists the tasks. Session counts are estimates for 2-hour days.</p><p>Japanese stroke-order data comes from <a href="https://kanjivg.tagaini.net" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, licensed CC BY-SA 3.0. C code is compiled by the free <a href="https://godbolt.org" target="_blank" rel="noopener">Compiler Explorer</a> service; Python runs with <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> and SQL with <a href="https://sql.js.org" target="_blank" rel="noopener">sql.js</a>.</p></div>`;
   };
@@ -399,13 +399,13 @@
   function practiceButton(pid, block) {
     const s = window.Practice && window.Practice.stats(pid);
     if (!s) return "";
-    const label = `📝 Practice: ${s.quiz ? `${s.quiz} quiz question${s.quiz > 1 ? "s" : ""}` : ""}${s.quiz && s.tasks ? " + " : ""}${s.tasks ? `${s.tasks} task${s.tasks > 1 ? "s" : ""}` : ""}`;
+    const label = `${icon("practice")} Practice: ${s.quiz ? `${s.quiz} quiz question${s.quiz > 1 ? "s" : ""}` : ""}${s.quiz && s.tasks ? " + " : ""}${s.tasks ? `${s.tasks} task${s.tasks > 1 ? "s" : ""}` : ""}`;
     return `<div class="btn-row"${block ? ' style="margin-top:10px"' : ""}><a class="btn practice-btn" href="#practice/${encodeURIComponent(pid)}">${label}</a>${s.qDone || s.tPassed ? `<span class="chip ${s.pct === 100 ? "ok" : ""}">${s.pct}% done</span>` : ""}</div>`;
   }
   function jpPracticeButton(i) {
     const s = window.Practice && window.Practice.jpDayStats(i);
     if (!s) return "";
-    return `<div class="btn-row"><a class="btn practice-btn" href="#jp/${i}">✍️ Draw today's characters &amp; quiz</a><span class="chip ${s.drawn === s.total ? "ok" : ""}">${s.drawn}/${s.total} drawn</span></div>`;
+    return `<div class="btn-row"><a class="btn practice-btn" href="#jp/${i}">${icon("pen")} Draw today's characters &amp; quiz</a><span class="chip ${s.drawn === s.total ? "ok" : ""}">${s.drawn}/${s.total} drawn</span></div>`;
   }
 
   views.practice = (pid) => {
@@ -439,7 +439,7 @@
   views.jp = (arg) => {
     const i = Math.max(0, Math.min(JP.days.length - 1, parseInt(arg, 10) || 0));
     return `<div id="jp-root">${window.Practice.jpPage(i)}</div>
-      <div class="pager"><a class="btn sm" href="#jp/${Math.max(0, i - 1)}">← Previous day</a><a class="btn sm" href="#jp/${Math.min(JP.days.length - 1, i + 1)}">Next day →</a></div>`;
+      <div class="pager"><a class="btn sm" href="#jp/${Math.max(0, i - 1)}">${icon("arrow-left")} Previous day</a><a class="btn sm" href="#jp/${Math.min(JP.days.length - 1, i + 1)}">Next day ${icon("arrow-right")}</a></div>`;
   };
   views.jp.after = (arg) => {
     const i = Math.max(0, Math.min(JP.days.length - 1, parseInt(arg, 10) || 0));
@@ -462,8 +462,9 @@
     document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === navView));
     renderSide();
     if (view === "settings") { const th = document.getElementById("theme"); if (th) th.value = document.documentElement.dataset.theme || ""; }
+    const anchor = arg && view === "curriculum" ? document.getElementById("p-" + arg) : null;
     if (render.lastView === view + (arg || "")) window.scrollTo(0, y);
-    else if (arg) { const t = document.getElementById("p-" + arg); if (t) t.scrollIntoView({ block: "start" }); }
+    else if (anchor) anchor.scrollIntoView({ block: "start" });
     else window.scrollTo(0, 0);
     render.lastView = view + (arg || "");
   }
@@ -524,6 +525,7 @@
       }).catch(() => toast("That file doesn't look like a Hydra School backup"));
     }
   });
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   window.addEventListener("hashchange", render);
   document.addEventListener("practice-change", renderSide);
   load(); rebuild(); render();
