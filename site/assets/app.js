@@ -1,4 +1,4 @@
-/* Hydra School – study planner. Plain JS, no build step. All progress lives in localStorage. */
+/* Hydra School – study planner. Plain JS, no build step. Progress lives in localStorage and syncs to your account (sync.js). */
 (function () {
   "use strict";
 
@@ -56,6 +56,7 @@
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { toast("Couldn't save – is browser storage blocked?"); }
+    if (window.Sync) window.Sync.changed();
   }
 
   /* ---------------- schedule building ---------------- */
@@ -378,6 +379,8 @@
   views.settings = () => {
     const s = state.settings;
     return `<h1>Settings</h1><p class="lead">Changes recalculate every date instantly. Your ticks are kept.</p>
+      ${accountSection()}
+      <h2>Plan</h2>
       <div class="card">
         <div class="field"><label for="start">Start date</label><input type="date" id="start" value="${s.start}"></div>
         <div class="field"><label>Study days</label><div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<label><input type="checkbox" data-sday="${d}" ${s.studyDays[d] ? "checked" : ""}>${WEEKDAYS[d]}</label>`).join("")}</div>
@@ -389,11 +392,146 @@
         <div class="field"><label for="theme">Theme</label><select id="theme"><option value="">Match my device</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       </div>
       <h2>Backup</h2>
-      <div class="card"><p class="muted" style="margin-top:0">Progress is stored only in this browser. Export a backup now and then (or to move to another device).</p>
+      <div class="card"><p class="muted" style="margin-top:0">${syncState().user ? "Your progress is saved to your account and in this browser. You can still export a copy." : "Progress is stored only in this browser. Export a backup now and then, or log in to keep it in your account."}</p>
         <div class="btn-row"><button class="btn" id="export">${icon("download")} Export progress</button><label class="btn">${icon("upload")} Import progress<input type="file" id="import" accept="application/json" hidden></label>
         <button class="btn" id="reset-anchors">Undo all plan shifts</button><button class="btn" id="reset" style="color:var(--warn)">Reset everything</button></div></div>
       <h2>About</h2><div class="card small muted"><p style="margin-top:0">Curriculum order follows the ALX Software Engineering programme (built on Holberton School's). The official task pages are on the ALX/Holberton intranet, which needs a login, so each project links to a public student repo whose README lists the tasks. Session counts are estimates for 2-hour days.</p><p>Japanese stroke-order data comes from <a href="https://kanjivg.tagaini.net" target="_blank" rel="noopener">KanjiVG</a> © Ulrich Apel, licensed CC BY-SA 3.0. C code is compiled by the free <a href="https://godbolt.org" target="_blank" rel="noopener">Compiler Explorer</a> service; Python runs with <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> and SQL with <a href="https://sql.js.org" target="_blank" rel="noopener">sql.js</a>.</p></div>`;
   };
+
+  /* ---------------- accounts ---------------- */
+  const syncState = () => (window.Sync ? window.Sync.state : { available: false, user: null, oauth: {}, status: "unavailable" });
+  const AUTH_ERRORS = {
+    not_configured: "That sign-in option isn't set up on this site yet.",
+    rate_limited: "Too many attempts. Please wait a few minutes and try again.",
+    cancelled: "Sign-in was cancelled.",
+    state: "That sign-in link expired. Please try again.",
+    provider: "We couldn't reach the sign-in provider. Please try again.",
+    no_email: "Your account has no verified email address. Add one with the provider, or sign up with email and password.",
+    email_exists: "An account with this email already uses a password. Log in with your password, then connect GitHub or Google in Settings.",
+  };
+  const SETTINGS_NOTES = { linked: "Connected. You can now sign in with it too.", link_taken: "That account is already connected to a different Hydra School account." };
+  function statusLabel(st) {
+    return ({ checking: "Checking…", syncing: "Syncing…", pending: "Saving soon…", saved: "All changes saved", offline: "Offline: will sync later", error: st.message || "Sync problem", guest: "Not signed in", unavailable: "Accounts unavailable" })[st.status] || "";
+  }
+  function oauthButtons(st) {
+    const b = [];
+    if (st.oauth.github) b.push(`<a class="btn oauth" href="/api/auth/github">${icon("github")} Continue with GitHub</a>`);
+    if (st.oauth.google) b.push(`<a class="btn oauth" href="/api/auth/google">${icon("google")} Continue with Google</a>`);
+    return b.length ? `<div class="oauth-row">${b.join("")}</div><div class="or"><span>or</span></div>` : "";
+  }
+  function authView(mode, code) {
+    const st = syncState();
+    const signup = mode === "signup";
+    let body;
+    if (st.user) {
+      body = `<h1>You're signed in</h1><p class="lead">as <b>${esc(st.user.email || st.user.name)}</b>. Your progress syncs to your account.</p>
+        <div class="btn-row"><a class="btn primary chev" href="#today">Go to today</a><a class="btn" href="#settings">Account settings</a></div>`;
+    } else if (st.available === false) {
+      body = `<h1>Accounts aren't available here</h1><p class="lead">This copy of Hydra School is running without its server, so progress stays in this browser. Everything else works.</p>
+        <div class="btn-row"><a class="btn primary chev" href="#today">Keep studying</a></div>`;
+    } else {
+      body = `<h1>${signup ? "Create your account" : "Welcome back"}</h1>
+        <p class="lead">${signup ? "Save your schedule, ticks, quiz answers and code to your account, and pick up on any device." : "Log in to load your progress on this device."}</p>
+        ${code && AUTH_ERRORS[code] ? `<p class="form-error" role="alert">${esc(AUTH_ERRORS[code])}</p>` : ""}
+        ${oauthButtons(st)}
+        <form id="auth-form" data-mode="${mode}" novalidate>
+          ${signup ? `<div class="field"><label for="au-name">Name <span class="muted">(optional)</span></label><input id="au-name" name="name" autocomplete="name" maxlength="80"></div>` : ""}
+          <div class="field"><label for="au-email">Email</label><input id="au-email" name="email" type="email" autocomplete="email" required></div>
+          <div class="field"><label for="au-pass">Password</label><input id="au-pass" name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" minlength="8" required>
+            ${signup ? `<span class="muted small">At least 8 characters.</span>` : ""}</div>
+          <p class="form-error" id="auth-error" role="alert" hidden></p>
+          <button class="btn action wide" type="submit">${signup ? "Create account" : "Log in"}</button>
+        </form>
+        <p class="muted small switch">${signup ? `Already have an account? <a href="#login">Log in</a>` : `New here? <a href="#signup">Create an account</a>`}</p>
+        ${hasGuestProgress() ? `<p class="note small">${icon("cloud")} The progress already in this browser will be added to your account.</p>` : ""}`;
+    }
+    return `<div class="auth"><div class="auth-form">${body}</div>
+      <div class="auth-art"><canvas data-pixel="mountains" data-seed="3" aria-hidden="true"></canvas>
+        <div class="auth-quote"><span class="mark-soft">Two hours a day.</span><br><span class="mark-soft">Every project, in order.</span></div></div></div>`;
+  }
+  function hasGuestProgress() {
+    try { if (localStorage.getItem("hydra-sync-owner")) return false; } catch (e) { return false; }
+    const P = window.Practice ? window.Practice._P() : {};
+    return Object.keys(state.done).length > 0 || ["quiz", "tasks", "jp", "chars"].some((k) => Object.keys(P[k] || {}).length);
+  }
+  views.login = (code) => authView("login", code);
+  views.signup = (code) => authView("signup", code);
+
+  function accountSection() {
+    const st = syncState();
+    if (st.available === false) return "";
+    if (!st.user) {
+      return `<h2>Account</h2><div class="card account-card"><div><h3>Keep your progress in an account</h3>
+        <p class="muted small" style="margin:0">Sign in to save your plan, ticks, quiz answers and code, and use them on any device.</p></div>
+        <div class="btn-row"><a class="btn primary" href="#login">Log in</a><a class="btn" href="#signup">Create account</a></div></div>`;
+    }
+    const u = st.user, m = u.methods;
+    const connect = ["github", "google"].filter((p) => st.oauth[p] && !m[p]).map((p) => `<a class="btn sm" href="/api/auth/${p}">${icon(p)} Connect ${p === "github" ? "GitHub" : "Google"}</a>`).join("");
+    const methods = [m.password && "email and password", m.github && "GitHub", m.google && "Google"].filter(Boolean).join(", ");
+    return `<h2>Account</h2><div class="card">
+      <div class="account-head"><span class="avatar lg">${esc(initial(u))}</span><div class="who"><b>${esc(u.name || u.email)}</b>${u.name ? `<div class="muted small">${esc(u.email)}</div>` : ""}
+        <div class="muted small">Signs in with ${esc(methods)}</div></div>
+        <span class="sync-pill" id="sync-status" data-s="${st.status}">${esc(statusLabel(st))}</span></div>
+      <div class="btn-row" style="margin-top:16px">${connect}<button class="btn sm" id="logout">${icon("log-out")} Log out</button></div>
+      <details class="acct-more"><summary>${m.password ? "Change password" : "Add a password"}</summary>
+        <form id="pw-form" class="acct-form">${m.password ? `<div class="field"><label for="pw-cur">Current password</label><input id="pw-cur" type="password" autocomplete="current-password" required></div>` : ""}
+          <div class="field"><label for="pw-new">New password</label><input id="pw-new" type="password" autocomplete="new-password" minlength="8" required></div>
+          <p class="form-error" hidden></p><button class="btn primary sm" type="submit">Save password</button></form></details>
+      <details class="acct-more"><summary>Delete account</summary>
+        <form id="del-form" class="acct-form"><p class="muted small" style="margin-top:0">This deletes your account and the progress saved in it, and clears it from this browser. Export a backup first if you want to keep it.</p>
+          ${m.password ? `<div class="field"><label for="del-pw">Password</label><input id="del-pw" type="password" autocomplete="current-password" required></div>` : ""}
+          <p class="form-error" hidden></p><button class="btn sm danger" type="submit">${icon("trash")} Delete my account</button></form></details>
+    </div>`;
+  }
+  const initial = (u) => ((u.name || u.email || "?").trim()[0] || "?").toUpperCase();
+
+  async function onSubmit(e) {
+    const f = e.target;
+    if (!["auth-form", "pw-form", "del-form"].includes(f.id)) return;
+    e.preventDefault();
+    const err = f.querySelector(".form-error");
+    const btn = f.querySelector("button[type=submit]");
+    const show = (msg) => { err.textContent = msg; err.hidden = !msg; };
+    show("");
+    btn.disabled = true;
+    try {
+      if (f.id === "auth-form") {
+        const email = f.querySelector("#au-email").value.trim(), password = f.querySelector("#au-pass").value;
+        const name = f.querySelector("#au-name");
+        if (!email || !password) return show("Enter your email and password.");
+        const signup = f.dataset.mode === "signup";
+        const r = signup ? await window.Sync.signup(email, password, name ? name.value : "") : await window.Sync.login(email, password);
+        if (!r.ok) return show(r.data.error || "Something went wrong.");
+        toast(signup ? "Account created" : "Logged in");
+        location.hash = "#today";
+      } else if (f.id === "pw-form") {
+        const cur = f.querySelector("#pw-cur");
+        const r = await window.Sync.updateAccount({ newPassword: f.querySelector("#pw-new").value, password: cur ? cur.value : undefined });
+        if (!r.ok) return show(r.data.error || "Something went wrong.");
+        toast("Password saved");
+      } else if (f.id === "del-form") {
+        if (!confirm("Delete your account and all the progress saved in it? This can't be undone.")) return;
+        const pw = f.querySelector("#del-pw");
+        const r = await window.Sync.deleteAccount(pw ? pw.value : undefined);
+        if (!r.ok) return show(r.data.error || "Something went wrong.");
+        toast("Account deleted"); location.hash = "#today";
+      }
+    } finally { btn.disabled = false; }
+  }
+  document.addEventListener("submit", onSubmit);
+
+  // Re-render account-dependent pages when the signed-in user changes; otherwise just refresh the status bits.
+  let syncKey = "";
+  function onSync(st) {
+    renderSide();
+    const pill = document.getElementById("sync-status");
+    if (pill) { pill.textContent = statusLabel(st); pill.dataset.s = st.status; }
+    const key = [st.available, st.user && JSON.stringify(st.user), st.oauth.github, st.oauth.google].join("|");
+    if (key !== syncKey) {
+      syncKey = key;
+      if (["login", "signup", "settings"].includes(route().view)) render();
+    }
+  }
 
   /* ---------------- practice ---------------- */
   function practiceButton(pid, block) {
@@ -464,7 +602,10 @@
     const navView = view === "jp" ? "japanese" : view;
     document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === navView));
     renderSide();
-    if (view === "settings") { const th = document.getElementById("theme"); if (th) th.value = document.documentElement.dataset.theme || ""; }
+    if (view === "settings") {
+      const th = document.getElementById("theme"); if (th) th.value = document.documentElement.dataset.theme || "";
+      if (arg && SETTINGS_NOTES[arg] && render.lastView !== view + arg) toast(SETTINGS_NOTES[arg]);
+    }
     const anchor = arg && view === "curriculum" ? document.getElementById("p-" + arg) : null;
     if (render.lastView === view + (arg || "")) window.scrollTo(0, y);
     else if (anchor) anchor.scrollIntoView({ block: "start" });
@@ -478,11 +619,17 @@
       <span class="mini-stat">code <b>${pct(cd, CODE.length)}%</b></span>
       ${state.settings.japanese ? `<span class="mini-stat">日本語 <b>${pct(jd, JPD.length)}%</b></span>` : ""}
       <span class="mini-stat">streak <b>${st}d</b></span>
-      <a class="btn primary chev sm" href="#today">Today</a>`;
+      ${accountChip()}<a class="btn primary chev sm" href="#today">Today</a>`;
+  }
+  function accountChip() {
+    const st = syncState();
+    if (st.user) return `<a class="avatar" href="#settings" title="${esc(`${st.user.email} · ${statusLabel(st)}`)}" aria-label="Account: ${esc(st.user.email)}" data-s="${st.status}">${esc(initial(st.user))}</a>`;
+    if (st.available) return `<a class="btn sm" href="#login">Log in</a>`;
+    return "";
   }
 
   document.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-toggle],[data-resched],[data-week],[data-markall],[data-move],#export,#reset,#reset-anchors");
+    const b = e.target.closest("[data-toggle],[data-resched],[data-week],[data-markall],[data-move],#export,#reset,#reset-anchors,#logout");
     if (!b) return;
     if (b.dataset.toggle) toggle(b.dataset.toggle);
     else if (b.dataset.resched) reschedule(b.dataset.resched);
@@ -498,6 +645,10 @@
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `hydra-school-backup-${todayISO()}.json`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    } else if (b.id === "logout") {
+      if (window.Sync.pending() && window.Sync.state.status === "offline" && !confirm("Some changes haven't synced yet because you're offline. Log out anyway and lose them?")) return;
+      b.disabled = true;
+      window.Sync.logout().then(() => { toast("Logged out"); location.hash = "#today"; });
     } else if (b.id === "reset-anchors") {
       state.anchors = { code: [], jp: [] }; save(); rebuild(); render(); toast("Back to the original plan dates");
     } else if (b.id === "reset") {
@@ -524,6 +675,7 @@
         const data = JSON.parse(txt);
         if (!data || typeof data.done !== "object") throw new Error("bad file");
         localStorage.setItem(STORE_KEY, JSON.stringify(data));
+        if (window.Sync) window.Sync.changed();
         load(); rebuild(); render(); toast("Progress imported");
       }).catch(() => toast("That file doesn't look like a Hydra School backup"));
     }
@@ -531,5 +683,7 @@
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   window.addEventListener("hashchange", render);
   document.addEventListener("practice-change", renderSide);
+  window.App = { reload() { load(); rebuild(); render(); } };
+  if (window.Sync) window.Sync.on(onSync);
   load(); rebuild(); render();
 })();

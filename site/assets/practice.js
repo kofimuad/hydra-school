@@ -24,9 +24,15 @@
   /* ---------------- storage ---------------- */
   const KEY = "hydra-practice-v1";
   let P;
-  try { P = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { P = {}; }
-  P.quiz = P.quiz || {}; P.tasks = P.tasks || {}; P.jp = P.jp || {}; P.chars = P.chars || {};
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
+  function loadP() {
+    try { P = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { P = {}; }
+    P.quiz = P.quiz || {}; P.tasks = P.tasks || {}; P.jp = P.jp || {}; P.chars = P.chars || {};
+  }
+  loadP();
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {}
+    if (window.Sync) window.Sync.changed();
+  };
 
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const EX = () => window.EX || {};
@@ -851,5 +857,5 @@
     return { drawn: plan.draw.filter((c) => st.drawn[c]).length, total: plan.draw.length };
   }
 
-  window.Practice = { projectPage, bindProject, stats, jpPage, bindJp, jpDayStats, drawPad, _P: () => P };
+  window.Practice = { projectPage, bindProject, stats, jpPage, bindJp, jpDayStats, drawPad, _P: () => P, _reload: loadP };
 })();
