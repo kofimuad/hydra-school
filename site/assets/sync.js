@@ -19,6 +19,7 @@
     status: "checking", // checking | unavailable | guest | syncing | pending | saved | offline | error
     message: "",
     updated: null,
+    fresh: false, // set after the first sync of an account that has no saved progress yet
   };
   const listeners = [];
   const emit = () => listeners.forEach((fn) => { try { fn(S); } catch (e) { console.error(e); } });
@@ -96,6 +97,7 @@
       next = srv.data || {}; // another account's data was on this device
     }
     ls.set(OWNER, S.user.id); ls.set(VER, srv.version);
+    S.fresh = !srv.data; // nothing saved yet: a brand-new account
     writeLocal(next);
     S.updated = srv.updated || null;
     if (needPush) { ls.set(DIRTY, "1"); await push(); } else { ls.del(DIRTY); setStatus("saved"); }

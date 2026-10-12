@@ -2,6 +2,7 @@
 
 A day-by-day study planner for the **ALX / Holberton School software engineering curriculum** and a **beginner Japanese** track.
 
+- **Pick your path when you sign up:** programming and Japanese, programming only, or Japanese only. Your plan starts on the day you sign up. You can change the path later in **Settings**.
 - **Coding: 2 hours a day.** You get a dated session every study day, covering Foundations (shell, Git, C, data structures, Python, SQL, JavaScript, DevOps, the AirBnB clone and a portfolio project), then the **Backend**, **Machine Learning**, **Low-level & Algorithms** and **Frontend** specializations, in an order you choose.
 - **Japanese: 1 hour a day.** Kana first, then the Japan Foundation's free IRODORI course (A1 → A2), with Anki vocabulary and listening practice.
 - Each project shows what you'll learn, free resources, and a link to a public repo whose README lists the real tasks.
@@ -66,7 +67,7 @@ You can also open `site/index.html` directly. Everything works except accounts, 
 | **Curriculum** | Every project grouped by track, with objectives, resources, task links, sessions and progress. |
 | **Practice** | Quizzes and auto-checked tasks for every project, plus a score for each one. |
 | **Japanese** | The daily routine, the stages, and all the free resources. |
-| **Settings** | Account (log out, connect GitHub/Google, password, delete), start date, rest days, specialization order and on/off, theme, backup and restore. |
+| **Settings** | Learning path, account (log out, connect GitHub/Google, password, delete), start date, rest days, specialization order and on/off, theme, backup and restore. |
 | **Log in / Sign up** | Email and password, or GitHub / Google. |
 
 ## Editing the curriculum

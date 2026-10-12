@@ -35,6 +35,7 @@
         { id: "backend", on: true }, { id: "ml", on: true },
         { id: "lowlevel", on: true }, { id: "frontend", on: true },
       ],
+      coding: true,
       japanese: true,
     },
     anchors: { code: [], jp: [] }, // reschedules: {key, date}
@@ -50,6 +51,7 @@
     state.done = state.done || {};
     state.settings = Object.assign(d.settings, state.settings || {});
     state.anchors = Object.assign(d.anchors, state.anchors || {});
+    if (!state.settings.coding && !state.settings.japanese) state.settings.coding = true;
     // keep any newly added tracks
     TRACKS.filter((t) => !t.core && !state.settings.tracks.some((x) => x.id === t.id))
       .forEach((t) => state.settings.tracks.push({ id: t.id, on: false }));
@@ -76,6 +78,7 @@
   }
 
   function buildCode() {
+    if (!state.settings.coding) return [];
     const seen = new Set(), list = [];
     for (const t of activeTracks()) {
       for (const pid of t.projects) {
@@ -175,6 +178,25 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
   }
 
+  let planWeekOffset = null;
+  /* ---------------- learning path ---------------- */
+  const PATHS = [
+    { id: "both", icon: "graduation", title: "Programming + Japanese", sub: "3 hours a day: 2 h of code and 1 h of Japanese" },
+    { id: "code", icon: "code", title: "Programming only", sub: "2 hours a day on the ALX / Holberton curriculum" },
+    { id: "jp", icon: "language", title: "Japanese only", sub: "1 hour a day, from kana to A2" },
+  ];
+  const pathOf = (st) => (st.coding && st.japanese ? "both" : st.coding ? "code" : "jp");
+  const pathPicker = (selected, name) => `<div class="path-pick" role="radiogroup" aria-label="Learning path">${PATHS.map((x) => `
+    <label class="path-opt"><input type="radio" name="${name}" value="${x.id}" ${x.id === selected ? "checked" : ""}>
+      <span class="path-ico">${icon(x.icon)}</span><span><b>${esc(x.title)}</b><span class="muted small">${esc(x.sub)}</span></span></label>`).join("")}</div>`;
+  // Set the learning path. With restart, the plan starts from today (used when an account is created).
+  function applyPath(path, restart) {
+    state.settings.coding = path !== "jp";
+    state.settings.japanese = path !== "code";
+    if (restart) { state.settings.start = todayISO(); state.anchors = { code: [], jp: [] }; planWeekOffset = null; }
+    save(); rebuild(); render();
+  }
+
   /* ---------------- views ---------------- */
   const views = {};
 
@@ -189,13 +211,18 @@
     const dayNo = code ? CODE.indexOf(code) + 1 : CODE.length;
     const now = new Date();
     const clock = `${fmt(t, { year: true })} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const headline = code ? `Day ${dayNo}. ${esc(byId[code.pid].title)}.` : "You finished the whole plan.";
-    let html = `<section class="hero"><canvas data-pixel="mountains" data-seed="${dayNo}" aria-hidden="true"></canvas>
+    const st = state.settings;
+    const headline = code ? `Day ${dayNo}. ${esc(byId[code.pid].title)}.`
+      : !st.coding && jp ? `Day ${jp.i + 1}. ${esc(jp.day.title)}.` : "You finished the whole plan.";
+    const sub = st.coding && st.japanese ? "Two hours of code and one hour of Japanese. Show up today and the schedule takes care of the rest."
+      : st.coding ? "Two hours of code a day. Show up today and the schedule takes care of the rest."
+      : "One hour of Japanese a day. Show up today and the schedule takes care of the rest.";
+    let html = `<section class="hero"><canvas data-pixel="${st.coding ? "mountains" : "hills"}" data-seed="${st.coding ? dayNo : 11}" aria-hidden="true"></canvas>
       <div class="hero-in">
         <span class="meta">${clock}${restDay ? " · rest day" : ""}${doneToday ? ` · ${doneToday} done today` : ""}</span>
         <h1><span class="mark">${greeting}.</span><br><span class="mark">${headline}</span></h1>
-        <p class="sub"><span class="mark-soft">Two hours of code and one hour of Japanese. Show up today and the schedule takes care of the rest.</span></p>
-        <div class="btn-row">${code ? `<a class="btn primary chev" href="#practice/${encodeURIComponent(code.pid)}">Start practising</a>` : ""}${jp ? `<a class="btn" href="#jp/${jp.i}">${icon("pen")} Japanese drills</a>` : ""}</div>
+        <p class="sub"><span class="mark-soft">${sub}</span></p>
+        <div class="btn-row">${code ? `<a class="btn primary chev" href="#practice/${encodeURIComponent(code.pid)}">Start practising</a>` : ""}${jp ? `<a class="btn${code ? "" : " primary chev"}" href="#jp/${jp.i}">${code ? icon("pen") + " " : ""}Japanese drills</a>` : ""}</div>
       </div></section>`;
 
     if (cBehind + jBehind > 0) {
@@ -205,7 +232,7 @@
 
     html += `<div class="grid-2">`;
     // Coding card
-    if (code) {
+    if (!st.coding) { /* Japanese-only path */ } else if (code) {
       const p = byId[code.pid], tr = trackOf(code.track);
       const ahead = code.date > t;
       html += `<section class="card today-card" style="--card-accent:var(--a-${p.area})">
@@ -244,19 +271,19 @@
     html += `</div>`;
 
     // Up next
-    const upcoming = CODE.filter((s) => !s.done).slice(1, 6);
+    const upcoming = (st.coding ? CODE : JPD).filter((s) => !s.done).slice(1, 6);
     if (upcoming.length) {
       html += `<h2>Coming up</h2><div class="stack">${upcoming.map((s) => {
-        const p = byId[s.pid];
+        const title = s.kind === "code" ? byId[s.pid].title : s.day.title;
+        const what = s.kind === "code" ? sessionPlan(byId[s.pid], s.i) : s.day.tasks.join(" · ");
         return `<div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
-          <div><div style="font-weight:600">${esc(p.title)} <span class="muted small">· ${s.i + 1}/${s.n}</span></div><div class="muted small">${esc(sessionPlan(p, s.i))}</div></div>
+          <div><div style="font-weight:600">${esc(title)} <span class="muted small">· ${s.i + 1}/${s.n}</span></div><div class="muted small">${esc(what)}</div></div>
           <span class="chip">${fmt(s.date)}</span></div>`;
       }).join("")}</div>`;
     }
     return html;
   };
 
-  let planWeekOffset = null;
   views.plan = () => {
     const all = [...CODE, ...JPD];
     if (!all.length) return `<h1>Schedule</h1><p class="lead">Nothing scheduled.</p>`;
@@ -271,7 +298,9 @@
     const PER = 2;
     const t = todayISO();
 
-    let html = `<h1>Schedule</h1><p class="lead">Your week-by-week plan. Coding: 2 h/day, Japanese: 1 h/day. Dates move if you shift the plan from the Today page. Finishes around <strong>${fmtMonth(lastDate)}</strong> (${totalWeeks} weeks).</p>`;
+    const both = state.settings.coding && state.settings.japanese;
+    const hours = [state.settings.coding && "Coding: 2 h/day", state.settings.japanese && "Japanese: 1 h/day"].filter(Boolean).join(", ");
+    let html = `<h1>Schedule</h1><p class="lead">Your week-by-week plan. ${hours}. Dates move if you shift the plan from the Today page. Finishes around <strong>${fmtMonth(lastDate)}</strong> (${totalWeeks} weeks).</p>`;
     const pager = `<div class="pager">
       <button class="btn sm" data-week="${planWeekOffset - PER}" ${planWeekOffset <= 0 ? "disabled" : ""}>${icon("arrow-left")} Earlier</button>
       <div class="btn-row"><button class="btn sm" data-week="${curWeek}">This week</button>
@@ -290,10 +319,10 @@
         const items = byDate.get(date) || [];
         const code = items.filter((s) => s.kind === "code"), jp = items.filter((s) => s.kind === "jp");
         const rest = !items.length;
-        html += `<div class="day-row ${date === t ? "today" : ""} ${rest ? "rest" : ""}">
+        html += `<div class="day-row ${both ? "" : "one"} ${date === t ? "today" : ""} ${rest ? "rest" : ""}">
           <div class="day-date">${fmt(date)}<span class="muted">${date === t ? "Today" : rest ? "Rest" : ""}</span></div>
-          <div class="day-cell">${code.map((s) => { const p = byId[s.pid]; return checkRow(s.key, s.done, `<span class="ptitle">${esc(p.title)}</span> <span class="sub">${s.i + 1}/${s.n}</span><div class="sub">${esc(sessionPlan(p, s.i))}</div>`); }).join("") || (rest ? "" : `<span class="muted small">—</span>`)}</div>
-          <div class="day-cell">${jp.map((s) => checkRow(s.key, s.done, `<span class="ptitle">${esc(s.day.title)}</span><div class="sub">${esc(s.day.tasks[0])}</div>`)).join("")}</div>
+          ${!state.settings.coding ? "" : `<div class="day-cell">${code.map((s) => { const p = byId[s.pid]; return checkRow(s.key, s.done, `<span class="ptitle">${esc(p.title)}</span> <span class="sub">${s.i + 1}/${s.n}</span><div class="sub">${esc(sessionPlan(p, s.i))}</div>`); }).join("") || (rest ? "" : `<span class="muted small">—</span>`)}</div>`}
+          ${!state.settings.japanese ? "" : `<div class="day-cell">${jp.map((s) => checkRow(s.key, s.done, `<span class="ptitle">${esc(s.day.title)}</span><div class="sub">${esc(s.day.tasks[0])}</div>`)).join("")}</div>`}
         </div>`;
       }
       html += `</section>`;
@@ -311,6 +340,7 @@
   const checkRow = (key, done, label) => `<label class="check ${done ? "is-done" : ""}"><input type="checkbox" data-check="${key}" ${done ? "checked" : ""}><span class="txt">${label}</span></label>`;
 
   views.curriculum = (focusId) => {
+    if (!state.settings.coding) return `<h1>Curriculum</h1><p class="lead">Programming isn't part of your learning path. Change your path in <a href="#settings">Settings</a> to add it.</p>`;
     const sessionsByPid = {};
     CODE.forEach((s) => (sessionsByPid[s.pid] = sessionsByPid[s.pid] || []).push(s));
     const shown = new Set();
@@ -344,7 +374,7 @@
   };
 
   views.japanese = () => {
-    if (!state.settings.japanese) return `<h1>Japanese</h1><p class="lead">The Japanese track is turned off. Turn it on in <a href="#settings">Settings</a>.</p>`;
+    if (!state.settings.japanese) return `<h1>Japanese</h1><p class="lead">Japanese isn't part of your learning path. Change your path in <a href="#settings">Settings</a> to add it.</p>`;
     const d = JPD.filter((s) => s.done).length;
     const stages = [];
     for (const s of JPD) {
@@ -385,10 +415,10 @@
         <div class="field"><label for="start">Start date</label><input type="date" id="start" value="${s.start}"></div>
         <div class="field"><label>Study days</label><div class="daypick">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<label><input type="checkbox" data-sday="${d}" ${s.studyDays[d] ? "checked" : ""}>${WEEKDAYS[d]}</label>`).join("")}</div>
           <span class="muted small">Untick a day to make it a rest day (applies to both coding and Japanese).</span></div>
-        <div class="field"><label>Specializations (in the order you'll do them, after Foundations)</label>
+        <div class="field"><label>Learning path</label>${pathPicker(pathOf(s), "set-path")}</div>
+        ${!s.coding ? "" : `<div class="field"><label>Specializations (in the order you'll do them, after Foundations)</label>
           <ul class="order-list">${s.tracks.map((x, i) => { const t = trackOf(x.id); return t ? `<li><input class="switch" type="checkbox" data-track="${x.id}" ${x.on ? "checked" : ""} aria-label="Include ${esc(t.name)}"><span class="name">${esc(t.name)}</span>
-            <button class="btn sm" data-move="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">${icon("arrow-up")}</button><button class="btn sm" data-move="${i}" data-dir="1" ${i === s.tracks.length - 1 ? "disabled" : ""} aria-label="Move down">${icon("arrow-down")}</button></li>` : ""; }).join("")}</ul></div>
-        <div class="field"><label class="check"><input type="checkbox" id="jp-on" ${s.japanese ? "checked" : ""}><span>Include the Japanese track (1 h/day)</span></label></div>
+            <button class="btn sm" data-move="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">${icon("arrow-up")}</button><button class="btn sm" data-move="${i}" data-dir="1" ${i === s.tracks.length - 1 ? "disabled" : ""} aria-label="Move down">${icon("arrow-down")}</button></li>` : ""; }).join("")}</ul></div>`}
         <div class="field"><label for="theme">Theme</label><select id="theme"><option value="">Match my device</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       </div>
       <h2>Backup</h2>
@@ -413,10 +443,10 @@
   function statusLabel(st) {
     return ({ checking: "Checking…", syncing: "Syncing…", pending: "Saving soon…", saved: "All changes saved", offline: "Offline: will sync later", error: st.message || "Sync problem", guest: "Not signed in", unavailable: "Accounts unavailable" })[st.status] || "";
   }
-  function oauthButtons(st) {
-    const b = [];
-    if (st.oauth.github) b.push(`<a class="btn oauth" href="/api/auth/github">${icon("github")} Continue with GitHub</a>`);
-    if (st.oauth.google) b.push(`<a class="btn oauth" href="/api/auth/google">${icon("google")} Continue with Google</a>`);
+  function oauthButtons(st, signup) {
+    const b = [], d = signup ? " data-signup" : "";
+    if (st.oauth.github) b.push(`<a class="btn oauth" href="/api/auth/github"${d}>${icon("github")} Continue with GitHub</a>`);
+    if (st.oauth.google) b.push(`<a class="btn oauth" href="/api/auth/google"${d}>${icon("google")} Continue with Google</a>`);
     return b.length ? `<div class="oauth-row">${b.join("")}</div><div class="or"><span>or</span></div>` : "";
   }
   function authView(mode, code) {
@@ -433,7 +463,9 @@
       body = `<h1>${signup ? "Create your account" : "Welcome back"}</h1>
         <p class="lead">${signup ? "Save your schedule, ticks, quiz answers and code to your account, and pick up on any device." : "Log in to load your progress on this device."}</p>
         ${code && AUTH_ERRORS[code] ? `<p class="form-error" role="alert">${esc(AUTH_ERRORS[code])}</p>` : ""}
-        ${oauthButtons(st)}
+        ${signup ? `<div class="field"><label>Choose your learning path</label>${pathPicker(signupChoice(), "signup-path")}
+          <span class="muted small">Your plan starts today, ${fmt(todayISO(), { year: true })}, and is dated day by day from there.</span></div>` : ""}
+        ${oauthButtons(st, signup)}
         <form id="auth-form" data-mode="${mode}" novalidate>
           ${signup ? `<div class="field"><label for="au-name">Name <span class="muted">(optional)</span></label><input id="au-name" name="name" autocomplete="name" maxlength="80"></div>` : ""}
           <div class="field"><label for="au-email">Email</label><input id="au-email" name="email" type="email" autocomplete="email" required></div>
@@ -454,6 +486,31 @@
     const P = window.Practice ? window.Practice._P() : {};
     return Object.keys(state.done).length > 0 || ["quiz", "tasks", "jp", "chars"].some((k) => Object.keys(P[k] || {}).length);
   }
+  // The path picked on the sign-up page is kept until the new account first syncs (including through a GitHub/Google redirect).
+  const PENDING = "hydra-pending-path";
+  function signupChoice() {
+    let v = null; try { v = localStorage.getItem("hydra-path-choice"); } catch (e) {}
+    return PATHS.some((x) => x.id === v) ? v : "both";
+  }
+  function setPendingPath() { try { localStorage.setItem(PENDING, JSON.stringify({ path: signupChoice(), at: Date.now() })); } catch (e) {} }
+  function takePendingPath() {
+    let p = null;
+    try { p = JSON.parse(localStorage.getItem(PENDING)); localStorage.removeItem(PENDING); } catch (e) {}
+    return p && PATHS.some((x) => x.id === p.path) && Date.now() - p.at < 3600e3 ? p.path : null;
+  }
+  // A brand-new account: set up its plan from the chosen path, starting today, or ask for a path.
+  function setUpNewAccount() {
+    const path = takePendingPath();
+    if (path) applyPath(path, true);
+    else location.hash = "#welcome";
+  }
+  document.addEventListener("click", (e) => { if (e.target.closest("a.oauth[data-signup]")) setPendingPath(); });
+
+  views.welcome = () => `<div class="welcome"><h1>Welcome to Hydra School${syncState().user && syncState().user.name ? `, ${esc(syncState().user.name.split(" ")[0])}` : ""}</h1>
+    <p class="lead">What do you want to learn? Your plan starts today, ${fmt(todayISO(), { year: true })}. You can change this later in Settings.</p>
+    <form id="welcome-form">${pathPicker(pathOf(state.settings), "welcome-path")}
+      <button class="btn action" type="submit" style="margin-top:18px">Start my plan</button></form></div>`;
+
   views.login = (code) => authView("login", code);
   views.signup = (code) => authView("signup", code);
 
@@ -487,6 +544,12 @@
 
   async function onSubmit(e) {
     const f = e.target;
+    if (f.id === "welcome-form") {
+      e.preventDefault();
+      applyPath(f.querySelector("input[name=welcome-path]:checked").value, true);
+      location.hash = "#today";
+      return;
+    }
     if (!["auth-form", "pw-form", "del-form"].includes(f.id)) return;
     e.preventDefault();
     const err = f.querySelector(".form-error");
@@ -500,6 +563,7 @@
         const name = f.querySelector("#au-name");
         if (!email || !password) return show("Enter your email and password.");
         const signup = f.dataset.mode === "signup";
+        if (signup) setPendingPath();
         const r = signup ? await window.Sync.signup(email, password, name ? name.value : "") : await window.Sync.login(email, password);
         if (!r.ok) return show(r.data.error || "Something went wrong.");
         toast(signup ? "Account created" : "Logged in");
@@ -523,6 +587,7 @@
   // Re-render account-dependent pages when the signed-in user changes; otherwise just refresh the status bits.
   let syncKey = "";
   function onSync(st) {
+    if (st.user && st.fresh) { st.fresh = false; setUpNewAccount(); }
     renderSide();
     const pill = document.getElementById("sync-status");
     if (pill) { pill.textContent = statusLabel(st); pill.dataset.s = st.status; }
@@ -554,6 +619,7 @@
         <div class="btn-row" style="margin-bottom:16px">${projectLinks(p)}</div>
         <div id="practice-root">${window.Practice.projectPage(pid, p)}</div>`;
     }
+    if (!state.settings.coding) return `<h1>Practice</h1><p class="lead">Programming isn't part of your learning path. Change your path in <a href="#settings">Settings</a> to add it.</p>`;
     let html = `<h1><span class="mark">Practice</span></h1><p class="lead">ALX-style quiz questions and auto-checked tasks for every project. C is compiled online. Python, JavaScript and SQL run in your browser. Shell answers are pattern-checked. Server work is a checklist you tick yourself.</p>`;
     const shown = new Set();
     for (const t of activeTracks()) {
@@ -600,7 +666,10 @@
     if (views[view].after) views[view].after(arg);
     if (window.PixelArt) window.PixelArt.paintAll(el);
     const navView = view === "jp" ? "japanese" : view;
-    document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("active", a.dataset.view === navView));
+    document.querySelectorAll("#nav a").forEach((a) => {
+      a.classList.toggle("active", a.dataset.view === navView);
+      a.hidden = (!state.settings.coding && (a.dataset.view === "curriculum" || a.dataset.view === "practice")) || (!state.settings.japanese && a.dataset.view === "japanese");
+    });
     renderSide();
     if (view === "settings") {
       const th = document.getElementById("theme"); if (th) th.value = document.documentElement.dataset.theme || "";
@@ -616,7 +685,7 @@
     const cd = CODE.filter((s) => s.done).length, jd = JPD.filter((s) => s.done).length;
     const st = streak();
     document.getElementById("side-stats").innerHTML = `
-      <span class="mini-stat">code <b>${pct(cd, CODE.length)}%</b></span>
+      ${state.settings.coding ? `<span class="mini-stat">code <b>${pct(cd, CODE.length)}%</b></span>` : ""}
       ${state.settings.japanese ? `<span class="mini-stat">日本語 <b>${pct(jd, JPD.length)}%</b></span>` : ""}
       <span class="mini-stat">streak <b>${st}d</b></span>
       ${accountChip()}<a class="btn primary chev sm" href="#today">Today</a>`;
@@ -665,7 +734,8 @@
       if (!state.settings.studyDays.some(Boolean)) { state.settings.studyDays[+el.dataset.sday] = true; toast("Keep at least one study day"); }
       save(); rebuild(); render();
     } else if (el.dataset.track) { state.settings.tracks.find((x) => x.id === el.dataset.track).on = el.checked; save(); rebuild(); render(); }
-    else if (el.id === "jp-on") { state.settings.japanese = el.checked; save(); rebuild(); render(); }
+    else if (el.name === "set-path") { applyPath(el.value, false); toast("Learning path updated"); }
+    else if (el.name === "signup-path") { try { localStorage.setItem("hydra-path-choice", el.value); } catch (_) {} }
     else if (el.id === "theme") {
       if (el.value) document.documentElement.dataset.theme = el.value; else delete document.documentElement.dataset.theme;
       try { el.value ? localStorage.setItem("hydra-theme", el.value) : localStorage.removeItem("hydra-theme"); } catch (_) {}
